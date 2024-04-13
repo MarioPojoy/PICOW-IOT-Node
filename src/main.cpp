@@ -8,7 +8,16 @@
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SH110X.h>
 #include "credentials.h"
+#include "RPI.h"
+
+#define i2c_Address   0x3c
+#define SCREEN_WIDTH   128
+#define SCREEN_HEIGHT   64
+#define OLED_RESET      -1
+Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define DHTPIN  22
 #define DHTTYPE DHT22
@@ -19,7 +28,7 @@ PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
 
 unsigned long lastMsg = 0;
-int read_interval = 10000;
+int read_interval = 30000;
 
 const char* hostname = "picow-iot-node";
 
@@ -108,10 +117,16 @@ void setup() {
   Serial.begin(115200);
   delay(100);
   dht.begin();
+  display.begin(i2c_Address, true);
+  display.clearDisplay();
+  display.drawBitmap(0, 0, RPI, 128, 64, 1);
+  display.display();
   setup_wifi();
   setup_ota();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+  display.setTextColor(SH110X_WHITE);
+  delay(2000);
 }
 
 void loop() {
@@ -141,6 +156,29 @@ void loop() {
     Serial.println(output);
     client.publish("home/bedroom/sensors", output);
     Serial.println("Sent");
+
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0,0);
+    display.print("Temperatura: ");
+    display.setTextSize(2);
+    display.setCursor(0,10);
+    display.print(temp);
+    display.print(" ");
+    display.setTextSize(1);
+    display.cp437(true);
+    display.write(167);
+    display.setTextSize(2);
+    display.print("C");
+    display.setTextSize(1);
+    display.setCursor(0, 35);
+    display.print("Humedad: ");
+    display.setTextSize(2);
+    display.setCursor(0, 45);
+    display.print(humidity);
+    display.print(" %"); 
+    display.display();
+
     digitalWrite(STATUS_LED, LOW);
   }
     
