@@ -8,29 +8,34 @@
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SH110X.h>
 #include "credentials.h"
-#include "RPI.h"
+#include "logo.h"
 
-#define i2c_Address   0x3c
-#define SCREEN_WIDTH   128
-#define SCREEN_HEIGHT   64
-#define OLED_RESET      -1
-Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#define oled
+
+#if defined(oled)
+  #include <Adafruit_GFX.h>
+  #include <Adafruit_SH110X.h>
+  #include <Fonts/FreeMonoBold18pt7b.h>
+  #define i2c_Address   0x3c
+  #define SCREEN_WIDTH   128
+  #define SCREEN_HEIGHT   64
+  #define OLED_RESET      -1
+  Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
 
 #define DHTPIN  22
 #define DHTTYPE DHT22
 #define STATUS_LED  LED_BUILTIN
+DHT dht(DHTPIN, DHTTYPE);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-DHT dht(DHTPIN, DHTTYPE);
 
 unsigned long lastMsg = 0;
 int read_interval = 30000;
 
-const char* hostname = "picow-iot-node";
+const char* hostname = "picow-iot-node1";
 
 void setup_wifi() {
   delay(100);
@@ -65,11 +70,10 @@ void setup_ota(){
   ArduinoOTA
     .onStart([]() {
       String type;
-      if (ArduinoOTA.getCommand() == U_FLASH) {
+      if (ArduinoOTA.getCommand() == U_FLASH)
         type = "sketch";
-      } else {
+      else
         type = "filesystem";
-      }
       Serial.println("Start updating " + type);
     });
     ArduinoOTA.onEnd([]() {
@@ -117,16 +121,16 @@ void setup() {
   Serial.begin(115200);
   delay(100);
   dht.begin();
-  display.begin(i2c_Address, true);
-  display.clearDisplay();
-  display.drawBitmap(0, 0, RPI, 128, 64, 1);
-  display.display();
+  #if defined(oled)
+    display.begin(i2c_Address, true);
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(SH110X_WHITE);
+  #endif
   setup_wifi();
   setup_ota();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-  display.setTextColor(SH110X_WHITE);
-  delay(2000);
 }
 
 void loop() {
@@ -145,8 +149,13 @@ void loop() {
     digitalWrite(STATUS_LED, HIGH);
     lastMsg = now;
 
+/*  
     float temp = dht.readTemperature();
-    float humidity = dht.readHumidity();
+    float humidity = dht.readHumidity(); 
+*/
+    
+    float temp = 21.3;
+    float humidity = 60.50; 
     
     doc["t"] = temp;
     doc["h"] = humidity;
@@ -154,32 +163,24 @@ void loop() {
     Serial.println("Read");
     serializeJson(doc, output);
     Serial.println(output);
-    client.publish("home/bedroom/sensors", output);
+    client.publish("home/sensors/salon2", output);
     Serial.println("Sent");
-
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setCursor(0,0);
-    display.print("Temperatura: ");
-    display.setTextSize(2);
-    display.setCursor(0,10);
-    display.print(temp);
-    display.print(" ");
-    display.setTextSize(1);
-    display.cp437(true);
-    display.write(167);
-    display.setTextSize(2);
-    display.print("C");
-    display.setTextSize(1);
-    display.setCursor(0, 35);
-    display.print("Humedad: ");
-    display.setTextSize(2);
-    display.setCursor(0, 45);
-    display.print(humidity);
-    display.print(" %"); 
-    display.display();
+    #if defined(oled)
+      display.clearDisplay();
+      display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, SH110X_WHITE);
+      display.setFont(&FreeMonoBold18pt7b);
+      display.setTextColor(SH110X_WHITE);
+      display.setCursor(45, 28);
+      display.print((int)temp);
+      display.drawCircle(92, 8, 3, SH110X_WHITE);
+      display.setCursor(100, 27);
+      display.print("C");
+      display.setCursor(45, 62);
+      display.print((int)humidity);
+      display.print("%");
+      display.display();
+    #endif
 
     digitalWrite(STATUS_LED, LOW);
   }
-    
 }
