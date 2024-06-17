@@ -11,7 +11,7 @@
 #include "credentials.h"
 #include "logo.h"
 
-#define oled
+//#define oled
 
 #if defined(oled)
   #include <Adafruit_GFX.h>
@@ -33,7 +33,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 unsigned long lastMsg = 0;
-int read_interval = 30000;
+int read_interval = 5000;
 
 const char* hostname = "picow-iot-node1";
 
@@ -149,13 +149,8 @@ void loop() {
     digitalWrite(STATUS_LED, HIGH);
     lastMsg = now;
 
-/*  
     float temp = dht.readTemperature();
     float humidity = dht.readHumidity(); 
-*/
-    
-    float temp = 21.3;
-    float humidity = 60.50; 
     
     doc["t"] = temp;
     doc["h"] = humidity;
@@ -163,7 +158,7 @@ void loop() {
     Serial.println("Read");
     serializeJson(doc, output);
     Serial.println(output);
-    client.publish("home/sensors/salon2", output);
+    client.publish("home/sensors/salon1", output);
     Serial.println("Sent");
     #if defined(oled)
       display.clearDisplay();
