@@ -12,7 +12,6 @@
 #include "logo.h"
 
 //#define oled
-//#define oled
 
 #if defined(oled)
   #include <Adafruit_GFX.h>
@@ -159,7 +158,6 @@ void loop() {
     Serial.println("Read");
     serializeJson(doc, output);
     Serial.println(output);
-    client.publish("home/sensors/salon1", output);
     client.publish("home/sensors/salon1", output);
     Serial.println("Sent");
     #if defined(oled)
